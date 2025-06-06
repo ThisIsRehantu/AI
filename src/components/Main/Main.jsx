@@ -1,6 +1,5 @@
 import React, { useContext, useState } from "react";
 import "./Main.css";
-import { assets } from "../../assets/assets";
 import { Context } from "../../context/Context";
 
 const Main = () => {
@@ -9,137 +8,101 @@ const Main = () => {
     setInput,
     onSent,
     recentPrompt,
+    prevPrompts,
     showResult,
     loading,
     resultData,
+    newChat,
   } = useContext(Context);
 
-  const [darkMode, setDarkMode] = useState(false);
+  // State lokal untuk textarea otomatis focus, dll
+  const [localInput, setLocalInput] = useState("");
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+  // Ketika user klik tombol Send
+  const handleSend = () => {
+    onSent(localInput);
   };
 
-  const handleCardClick = (text) => {
-    setInput(text);
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" && input.trim()) {
-      onSent(); // Memanggil fungsi kirim
+  // Ketika user tekan Enter di textarea
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSent(localInput);
     }
   };
 
   return (
-    <div className={`main ${darkMode ? "dark-mode" : ""}`}>
+    <div className="main-wrapper">
       <div className="nav">
-        <p className="logoName">Gemini</p>
-        <i
-          onClick={toggleDarkMode}
-          className={`fas ${darkMode ? "fa-sun" : "fa-moon"} mode-icon`}
-          aria-hidden="true"
-        />
-        <img src={assets.user_icon} alt="UserIcon" />
+        <p className="logoName">Gemini Clone</p>
+        {/* Tombol New Chat */}
+        <button onClick={newChat} className="newChatButton">
+          New Chat
+        </button>
       </div>
+
       <div className="main-container">
-        {!showResult ? (
-          <>
-            <div className="greet">
-              <p>
-                <span>Hello, Dev</span>
-              </p>
-              <p>How can I help you today?</p>
-            </div>
-            <div className="cards">
-              <div
-                className="card"
-                onClick={() =>
-                  handleCardClick("Suggest beautiful places to see on upcoming road trip")
-                }
-              >
-                <p>Suggest beautiful places to see on upcoming road trip</p>
-                <img src={assets.compass_icon} alt="CompassIcon" />
-              </div>
-              <div
-                className="card"
-                onClick={() =>
-                  handleCardClick("Get inspiration for creative project ideas")
-                }
-              >
-                <p>Get inspiration for creative project ideas</p>
-                <img src={assets.bulb_icon} alt="CompassIcon" />
-              </div>
-              <div
-                className="card"
-                onClick={() =>
-                  handleCardClick("Ask me anything about programming or coding tips")
-                }
-              >
-                <p>Ask me anything about programming or coding tips</p>
-                <img src={assets.message_icon} alt="CompassIcon" />
-              </div>
-              <div
-                className="card"
-                onClick={() =>
-                  handleCardClick("Explain the concept of Machine Learning")
-                }
-              >
-                <p>Explain the concept of Machine Learning</p>
-                <img src={assets.code_icon} alt="CompassIcon" />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="result">
-            <div className="result-title">
-              <img src={assets.user_icon} alt="UserIcon" />
-              <p>{recentPrompt}</p>
-            </div>
-            <div className="result-data">
-              <img src={assets.gemini_icon} alt="GeminiIcon" />
-              {loading ? (
-                <div className="loader">
-                  <hr />
-                  <hr />
-                  <hr />
-                </div>
-              ) : (
-                <div
-                  className="formatted-result"
-                  dangerouslySetInnerHTML={{ __html: resultData }}
-                />
-              )}
-            </div>
+        {/* Jika belum pernah kirim pertanyaan, tampilkan greeting */}
+        {!showResult && prevPrompts.length === 0 && !loading && (
+          <div className="greet">
+            <p>
+              <span>Hello, Dev! 🎉</span> <br />
+              Tanyakan apa saja ke Gemini AI.
+            </p>
           </div>
         )}
 
-        <div className="main-bottom">
-          <div className="search-box">
-            <input
-              onChange={(event) => setInput(event.target.value)}
-              value={input}
-              type="text"
-              placeholder="Enter a prompt here"
-              onKeyDown={handleKeyDown}
-            />
-            <div className="search-box-icon">
-              <img src={assets.gallery_icon} alt="GalleryIcon" />
-              <img src={assets.mic_icon} alt="MicIcon" />
-              {input ? (
-                <img
-                  onClick={() => onSent()}
-                  src={assets.send_icon}
-                  alt="SendIcon"
-                />
-              ) : null}
-            </div>
-          </div>
-          <p className="bottom-info">
-            Gemini may display inaccurate info, including about people, so
-            double-check its responses.{" "}
-            <a href="#">Your privacy & Gemini Apps</a>
-          </p>
+        {/* Area input */}
+        <div className="input-area">
+          <textarea
+            className="chat-input"
+            placeholder="Type your question..."
+            value={localInput}
+            onChange={(e) => setLocalInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <button onClick={handleSend} className="sendButton">
+            Send
+          </button>
         </div>
+
+        {/* Loading indicator */}
+        {loading && (
+          <div className="loading">
+            <span className="loader" />
+            <p>Loading...</p>
+          </div>
+        )}
+
+        {/* Tampilkan hasil jawaban */}
+        {showResult && !loading && (
+          <div className="result-area">
+            <p className="question-display">
+              <b>Q:</b> {recentPrompt}
+            </p>
+            <p className="answer-display">
+              <b>A:</b> {resultData}
+            </p>
+          </div>
+        )}
+
+        {/* Jika ada riwayat (prevPrompts), tampilkan sederet pertanyaan sebelumnya */}
+        {prevPrompts.length > 0 && (
+          <div className="history">
+            <p className="history-title">History:</p>
+            <ul>
+              {prevPrompts.map((p, idx) => (
+                <li key={idx}>{p}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="bottom-info">
+          Gemini ialah model AI yang mungkin kadang jawaban kurang tepat,
+          mohon cek kebenarannya.{" "}
+          <a href="#">Privacy &amp; Gemini</a>
+        </p>
       </div>
     </div>
   );
