@@ -1,81 +1,79 @@
-import { createContext, useState } from "react";
-import runChat from "../config/gemini";
+import React, { createContext, useState } from "react";
+import runChat from "../config/gemini"; // fungsi untuk memanggil Gemini API
 
 export const Context = createContext();
 
 const ContextProvider = (props) => {
-  const [input, setInput] = useState("");
-  const [recentPrompt, setRecentPrompt] = useState(""); // storing the recent prompts data
-  const [prevPrompts, setPrevPrompts] = useState([]); // storing the history of prompts data
-  const [showResult, setShowResult] = useState(false); // displaying the result
-  const [loading, setLoading] = useState(false); // for loading
-  const [resultData, setResultData] = useState(""); // displaying the result on web page
+  // ─────────────────────────────────────────────────────────────
+  // 1. State‐state utama
+  const [input, setInput] = useState("");            // isi textarea/input user
+  const [recentPrompt, setRecentPrompt] = useState(""); 
+  const [prevPrompts, setPrevPrompts] = useState([]); 
+  const [showResult, setShowResult] = useState(false);
+  const [loading, setLoading] = useState(false);     // untuk spinner loading
+  const [resultData, setResultData] = useState("");  // untuk menyimpan jawaban dari API
+  // ─────────────────────────────────────────────────────────────
 
-  // function for typing effect
-  const delayPara = (index, nextWord) => {
-    setTimeout(() => {
-      setResultData((prev) => prev + nextWord);
-    }, 75 * index);
+  // ─────────────────────────────────────────────────────────────
+  // 2. onSent: Fungsi yang dipanggil ketika user klik "Send"
+  const onSent = async (prompt) => {
+    if (!prompt.trim()) return;         // kalau kosong, abaikan
+    setLoading(true);
+    setShowResult(false);
+    try {
+      // 2.1. Panggil Gemini API melalui helper runChat()
+      const responseText = await runChat(prompt);
+
+      // 2.2. Simpan ke state
+      setResultData(responseText);
+      setRecentPrompt(prompt);
+
+      // 2.3. Tambah ke riwayat prompt
+      setPrevPrompts((prev) => [prompt, ...prev]);
+
+      setShowResult(true);
+    } catch (err) {
+      console.error("Error memanggil Gemini API:", err);
+      // (Opsional) kamu bisa set resultData ke pesan error
+      setResultData("⚠️ Terjadi kesalahan, cek console untuk detail.");
+      setShowResult(true);
+    } finally {
+      setLoading(false);
+    }
   };
+  // ─────────────────────────────────────────────────────────────
 
-  // arrow function for new chat creation functionality
+  // ─────────────────────────────────────────────────────────────
+  // 3. Fungsi newChat, jika ingin memulai “percakapan” baru (clear)
   const newChat = () => {
-    setLoading(false);
+    setInput("");
+    setRecentPrompt("");
+    setPrevPrompts([]);
+    setResultData("");
     setShowResult(false);
   };
-  const onSent = async (prompt) => {
-    setResultData("");
-    setLoading(true);
-    setShowResult(true);
+  // ─────────────────────────────────────────────────────────────
 
-    // if Condition for displaying results from sidebar prompt and input prompt
-    let response;
-    if (prompt !== undefined) {
-      response = await runChat(prompt);
-      setRecentPrompt(prompt);
-    } else {
-      setPrevPrompts((prev) => [...prev, input]);
-      setRecentPrompt(input);
-      response = await runChat(input);
-    }
-    let responseArray = response.split("**");
-    let newResponse = "";
-    for (let i = 0; i < responseArray.length; i++) {
-      if (i === 0 || i % 2 !== 1) {
-        newResponse += responseArray[i];
-      } else {
-        newResponse += "<b>" + responseArray[i] + "</b>";
-      }
-    }
-    let newResponseWithLineBreak = newResponse.split("*").join("</br>");
-    let newResponseArray = newResponseWithLineBreak.split(" "); // if there is space, it means there is new word
-
-    for (let i = 0; i < newResponseArray.length; i++) {
-      const nextWord = newResponseArray[i];
-      delayPara(i, nextWord + " ");
-    }
-    setLoading(false);
-    setInput("");
-  };
-
-  /* Calls onSent immediately with prompt when ContextProvider component is rendered */
-  // onSent("What is node.js?");
-
+  // ─────────────────────────────────────────────────────────────
+  // 4. Paketkan semua ke dalam contextValue agar bisa di‐consume oleh komponen
   const contextValue = {
     input,
     setInput,
+    onSent,
     recentPrompt,
-    setRecentPrompt,
     prevPrompts,
     setPrevPrompts,
     showResult,
     loading,
     resultData,
-    onSent,
     newChat,
   };
+  // ─────────────────────────────────────────────────────────────
+
   return (
-    <Context.Provider value={contextValue}>{props.children}</Context.Provider>
+    <Context.Provider value={contextValue}>
+      {props.children}
+    </Context.Provider>
   );
 };
 
